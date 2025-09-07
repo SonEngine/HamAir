@@ -8,23 +8,6 @@ kit = ServoKit(channels=16)
 BAUD = 420000
 PORT = "/dev/serial0"
 
-def send_to_servo(channel, us, bReverse = False):
-    a = (us - 1000) / 1000 * 180.0
-    #print(a)
-    #a = min(a,30)
-    if bReverse:
-        a = 180-a
-        a = max(0,a)
-    
-    kit.servo[channel].angle = a
-    
-def send_to_servo_angle(channel,a,bReverse = False):
-    if bReverse:
-        a = 180-a
-        a = max(0,a)
-    
-    kit.servo[channel].angle = a
-
 ESC_PIN = 13    
 #SERVO_PIN = 12
 ser = serial.Serial(PORT, BAUD, timeout=1)
@@ -32,6 +15,35 @@ buf = bytearray()
 
 pi = pigpio.pi()
 pi.set_mode(ESC_PIN, pigpio.OUTPUT)
+
+def send_to_servo(channel, us, bReverse = False):
+    # roll : [-1,1]
+    roll = (us - 1500) / 500
+    roll *= 45
+    a = roll + 90
+
+    if bReverse:
+        a = 180-a
+    
+    a = max(45, min(a, 135))
+    kit.servo[channel].angle = a
+    
+def send_to_servo_angle(channel, a, us, bReverse = False):
+
+    # us는 중립이 1500 이니까 0이 중립 [-1,1]
+    roll = (us - 1500) / 500
+
+    maxRange = 135 - (90 + abs(a-90))
+    roll *= maxRange
+    a = roll + a
+
+    if bReverse:
+        a = 180-a
+    
+    a = max(45, min(a, 135))
+
+    kit.servo[channel].angle = a
+
 
 def get_data_servo(raw, name):
     #us = (raw - 172) * (2000 / (1811 - 172)) + 500
@@ -106,14 +118,14 @@ try:
                     yaw = get_data(channels[3], "Yaw")
                     sc = channels[8]
 
-                    print(f"sc: {sc}")
+                    #print(f"sc: {sc}")
                     send_us(ESC_PIN, throttle)
                     if sc==997:
-                        send_to_servo_angle(0, 90+15, False)
-                        send_to_servo_angle(1, 90-15, False)
+                        send_to_servo_angle(0, 105, roll, False)
+                        send_to_servo_angle(1, 75, roll, False)
                     elif sc== 1792:
-                        send_to_servo_angle(0, 90+30,False)
-                        send_to_servo_angle(1, 90-30,False)
+                        send_to_servo_angle(0, 120, roll, False)
+                        send_to_servo_angle(1, 60, roll, False)
                     else:
                         send_to_servo(0, roll, False)
                         send_to_servo(1, roll, False)
